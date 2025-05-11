@@ -1,0 +1,4 @@
+# Automatically created by mypy
+*.DS_Store
+venv/
+*.mypy_cache/
