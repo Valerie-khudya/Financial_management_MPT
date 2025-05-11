@@ -6,7 +6,7 @@ from scipy.stats import skew, kurtosis, norm
 
 
 def get_data(tickers, start, end):
-    """Загзрука данных цен закрытия из Yahoo"""
+    """Загрзука данных цен закрытия из Yahoo"""
     data = yf.download(tickers, start=start, end=end)['Close'].dropna()
     return data
 
@@ -23,14 +23,17 @@ def find_max_csr(
         ret, vol, weights, portf_returns, portf_mean, daily_rf,
         max_csr, best_csr_ret, best_csr_vol, best_csr_weights, alpha
         ):
-    """Поиск макисмального кондиционного коэф. Шарпа среди двух вариантов,
+    """Поиск максимального кондиционного коэф. Шарпа среди двух вариантов,
     которые прописаны как аргументы функции"""
-    excess_returns = portf_returns - daily_rf  # Доходности с поправкой на безрисковую ставку в день.
-    VaR = np.percentile(excess_returns, alpha * 100)  # пороговое значение α-квантили — то есть потеря в худшие 5% дней.
-    tail_losses = excess_returns[excess_returns <= VaR]  # реальные доходности в "хвосте" распределения — те, что ниже или равны VaR
+    excess_returns = portf_returns - daily_rf
+    VaR = np.percentile(
+        excess_returns, alpha * 100
+        )  # пороговое значение α-квантиля, то есть потеря в худшие alpha% дней
 
+    # Реальные доходности в 'хвосте' распределения
+    tail_losses = excess_returns[excess_returns <= VaR]
     CVaR = tail_losses.mean()
-    csr = portf_mean / abs(CVaR)
+    csr = (portf_mean - daily_rf) / abs(CVaR)
 
     if csr > max_csr:
         max_csr, best_csr_ret, best_csr_vol = csr, ret, vol
@@ -48,14 +51,14 @@ def find_max_modified_sharpe(
     portf_skew = skew(portf_returns)
     portf_kurtosis = kurtosis(portf_returns, fisher=True)
 
-    z_cf = (
+    z_mf = (
         z
         + (1 / 6) * (z**2 - 1) * portf_skew
         + (1 / 24) * (z**3 - 3 * z) * portf_kurtosis
         - (1 / 36) * (2 * z**3 - 5 * z) * (portf_skew**2)
     )
-    if z_cf * portf_std != 0:
-        modified_sharpe = (portf_mean - daily_rf) / (z_cf * portf_std)
+    if z_mf * portf_std != 0:
+        modified_sharpe = (portf_mean - daily_rf) / (z_mf * portf_std)
         if modified_sharpe > max_msr:
             max_msr, best_msr_ret, best_msr_vol = modified_sharpe, ret, vol
             best_msr_weights = weights
@@ -63,7 +66,8 @@ def find_max_modified_sharpe(
 
 
 def generate_portfolios(num_portfolios, tickers, expected_return, cov_matrix,
-                        rf, daily_rf, ALPHA, min_vol_return, daily_returns, bounds
+                        rf, daily_rf, ALPHA, min_vol_return, daily_returns,
+                        bounds
                         ):
     """Генерация n-го количества портфелей"""
     # Инициализация записи весов активов и массива,
@@ -122,7 +126,7 @@ def generate_portfolios(num_portfolios, tickers, expected_return, cov_matrix,
             max_csr, best_csr_ret, best_csr_vol, best_csr_weights, ALPHA
             )
 
-        # Модифицированнный коэф. Шарпа
+        # Модифицированный коэф. Шарпа
         max_msr, best_msr_ret, best_msr_vol, best_msr_weights = find_max_modified_sharpe(
             z, portf_returns, portf_mean, daily_rf, portf_std,
             ret, vol, weights, max_msr, best_msr_ret,
@@ -156,19 +160,21 @@ if __name__ == '__main__':
     z = norm.ppf(1 - ALPHA)
 
     tickers = [
-        'AAPL', 'ASML', 'CME', 'DXCM', 'EQIX', 'IDXX', 'IRDM', 'IRM',
-        'AVGO', 'NVDL', 'QQQ'
+        'AAPL', 'ASML', 'AVGO', 'CME', 'DXCM', 'EQIX', 'IDXX', 'IRDM', 'IRM',
+        'NVDL', 'QQQ'
         ]
 
     # Ограничения на веса активов
     bounds = [(0.015, 0.21)] * len(tickers)
 
+    # Загрузка данных
     data_2023 = get_data(tickers, '2023-01-01', '2023-12-31')
-
     expected_annual_return_2023, cov_matrix_2023, daily_returns_2023 = get_returns_and_cov_matrix(data_2023)
 
-    # Построение Эффективной границы
-    ef = EfficientFrontier(expected_annual_return_2023, cov_matrix_2023, weight_bounds=bounds)
+    # Построение Границы эффективности
+    ef = EfficientFrontier(expected_annual_return_2023, cov_matrix_2023,
+                           weight_bounds=bounds
+                           )
     fig, ax = plt.subplots(figsize=(10, 7))
     plotting.plot_efficient_frontier(ef, ax=ax,
                                      show_assets=False)
@@ -206,7 +212,8 @@ if __name__ == '__main__':
     portf_2024_weights = np.array(list(ef.clean_weights().values()))
     portf_2024_ret = np.dot(portf_2024_weights, expected_annual_return_2024)
     portf_2024_vol = np.sqrt(np.dot(
-        portf_2024_weights.T, np.dot(cov_matrix_2024, portf_2024_weights)))
+        portf_2024_weights.T, np.dot(cov_matrix_2024, portf_2024_weights
+                                     )))
 
     # Вывод результатов в терминале
     print(f'\n📊 Максимальный Кондиционный коэф. Шарпа: {inf_max_csr['max_csr']:.4f}')
@@ -244,7 +251,8 @@ if __name__ == '__main__':
 
     # Визуализация
     scatter = ax.scatter(
-        results[0, :], results[1, :], c=results[2, :], cmap='viridis', alpha=0.4
+        results[0, :], results[1, :], c=results[2, :], cmap='viridis',
+        alpha=0.4
         )
     cbar = plt.colorbar(scatter, ax=ax)
     cbar.set_label('Коэффициент Шарпа')
