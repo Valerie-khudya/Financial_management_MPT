@@ -26,16 +26,16 @@ def get_close_to_excel(tickers, start, end):
 
 
 tickers = [
-    'AAPL', 'ASML', 'AVGO', 'CME', 'DXCM', 'EQIX', 'IDXX', 'IRDM', 'IRM',
-    'NVDL', 'QQQ'
-    ]
+        'AAPL', 'AVGO', 'CME', 'CSCO', 'EQIX', 'GOOGL', 'IRM', 'ISRG',
+        'NVDL', 'QQQ', 'SPY'
+        ]
 nasdaq_ticker = '^IXIC'
 
 data_2022 = get_close_to_excel(tickers, '2022-01-01', '2022-12-31')
 data_2023 = get_close_to_excel(tickers, '2023-01-01', '2023-12-31')
 data_2024 = get_close_to_excel(tickers, '2024-01-01', '2024-12-31')
 
-# Сохранение данных акций в Excel
+# Сохранение данных активов в Excel
 output_filename = 'close_2022-2024.xlsx'
 with pd.ExcelWriter(output_filename, engine='openpyxl') as writer:
     data_2022.to_excel(writer, sheet_name='Close data_2022', index=False)

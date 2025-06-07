@@ -11,7 +11,7 @@
 - [yfinance](https://pypi.org/project/yfinance/) - загрузка данных по акциям
 - [numpy](https://numpy.org) - работа с многомерными массивами и матрицами
 - [matplotlib](https://matplotlib.org) - визуализация
-- [scipy](https://scipy.org) -статистика (skewness, kurtosis)
+- [scipy](https://scipy.org) - статистика (skewness, kurtosis, norm)
 - [PyPortfolioOpt (pypfopt)](https://pyportfolioopt.readthedocs.io/en/latest/)- оптимизация портфеля
 
 ## Установка
