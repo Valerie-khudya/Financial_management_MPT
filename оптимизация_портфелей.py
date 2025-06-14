@@ -1,6 +1,5 @@
 import os
 import sys
-from decimal import Decimal
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,6 +8,11 @@ from scipy.optimize import minimize
 from scipy.stats import skew, kurtosis, norm
 from pypfopt import expected_returns, risk_models, EfficientFrontier, plotting
 
+# Этот код оптимизирует портфели по 5 показателям: Равновзвешенный портфель,
+# портфель с максимальной доходностью, портфель с минимальной волатильностью,
+# максимальный коэффицент Шарпа, максимальный кондиционный коэффицент Шарпа,
+# максимальный модифицированный коэффициент Шарпа, а также в результате
+# оптимизации строится график с границей эффективности
 
 def get_data(tickers, start, end):
     """Загрузка данных цен закрытия из Yahoo"""

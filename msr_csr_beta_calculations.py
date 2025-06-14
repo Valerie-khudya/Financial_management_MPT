@@ -5,6 +5,11 @@ import yfinance as yf
 from scipy.stats import skew, kurtosis, norm
 from pypfopt import expected_returns, risk_models
 
+# В коде считается Бета, максимальный кондиционный и модифициированные
+# коэффициенты Шарпа, чтобы в Excel файл не импортировать данные
+# суточных доходностей, было принято решение о расчете показателей
+# через код на Python
+
 
 def get_data(tickers, start, end):
     """Загрзука данных цен закрытия из Yahoo"""
@@ -89,63 +94,67 @@ if __name__ == '__main__':
      daily_returns_2024) = get_returns_and_cov_matrix(p_data_2024)
 
     all_weights = {}
-    with open('all_weights.txt', 'r', encoding='utf-8') as infile:
-        for line in infile:
-            if '-- ' in line:
-                name = line.strip()
-                weights_local = []
-            elif len(line) > 2:
-                weight = float(line.strip().split(': ')[1])
-                weights_local.append(weight)
-            else:
-                continue
-            if len(weights_local) == 11:
-                all_weights[name] = np.array(weights_local)
+    try:
+        with open('all_weights.txt', 'r', encoding='utf-8') as infile:
+            for line in infile:
+                if '-- ' in line:
+                    name = line.strip()
+                    weights_local = []
+                elif len(line) > 2:
+                    weight = float(line.strip().split(': ')[1])
+                    weights_local.append(weight)
+                else:
+                    continue
+                if len(weights_local) == 11:
+                    all_weights[name] = np.array(weights_local)
 
-    for rate, weights in all_weights.items():
-        if '-- Максимальный коэффиент Шарпа:' in rate:
-            max_sharpe_weights = weights
-        daily_returns = daily_returns_2023.dot(weights)
-        portf_mean = daily_returns.mean()
-        portf_std = daily_returns.std()
-        ret = np.dot(weights, expected_annual_return_2023)
-        vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix_2023, weights)))
+        for rate, weights in all_weights.items():
+            if '-- Максимальный коэффиент Шарпа:' in rate:
+                max_sharpe_weights = weights
+            daily_returns = daily_returns_2023.dot(weights)
+            portf_mean = daily_returns.mean()
+            portf_std = daily_returns.std()
+            ret = np.dot(weights, expected_annual_return_2023)
+            vol = np.sqrt(np.dot(weights.T, np.dot(cov_matrix_2023, weights)))
 
-        csr = Decimal(calculate_csr(
-            daily_returns, portf_mean, daily_rf_2023, ALPHA)
+            csr = Decimal(calculate_csr(
+                daily_returns, portf_mean, daily_rf_2023, ALPHA)
+                )
+
+            msr = Decimal(calculate_msr(
+                z, daily_returns, portf_mean, daily_rf_2023, portf_std
+                ))
+
+            beta = Decimal(calculate_beta(daily_returns, nasdaq_data_2023))
+
+            print('\n' + rate)
+            print(f'Кондиционный коэффициент Шарпа: {csr:.4}')
+            print(f'Модифицированный коэффициент Шарпа: {msr:.4}')
+            print(f'Бета портфеля: {beta:.4}')
+
+        # Расчеты для выбранного портфеля за 2024 г.
+        daily_returns_2024 = daily_returns_2024.dot(max_sharpe_weights)
+        portf_mean_2024 = daily_returns_2024.mean()
+        portf_std_2024 = daily_returns_2024.std()
+        ret_2024 = np.dot(max_sharpe_weights, expected_annual_return_2024)
+        vol_2024 = np.sqrt(np.dot(max_sharpe_weights.T, np.dot(
+            cov_matrix_2024, max_sharpe_weights))
             )
 
-        msr = Decimal(calculate_msr(
-            z, daily_returns, portf_mean, daily_rf_2023, portf_std
-             ))
+        csr_2024 = Decimal(calculate_csr(
+            daily_returns_2024, portf_mean_2024, daily_rf_2024, ALPHA)
+            )
 
-        beta = Decimal(calculate_beta(daily_returns, nasdaq_data_2023))
+        msr_2024 = Decimal(calculate_msr(
+            z, daily_returns_2024, portf_mean_2024, daily_rf_2024, portf_std_2024
+            ))
 
-        print('\n' + rate)
-        print(f'Кондиционный коэффициент Шарпа: {csr:.4}')
-        print(f'Модифицированный коэффициент Шарпа: {msr:.4}')
-        print(f'Бета портфеля: {beta:.4}')
+        beta_2024 = Decimal(calculate_beta(daily_returns_2024, nasdaq_data_2024))
 
-    # Расчеты для выбранного портфеля за 2024 г.
-    daily_returns_2024 = daily_returns_2024.dot(max_sharpe_weights)
-    portf_mean_2024 = daily_returns_2024.mean()
-    portf_std_2024 = daily_returns_2024.std()
-    ret_2024 = np.dot(max_sharpe_weights, expected_annual_return_2024)
-    vol_2024 = np.sqrt(np.dot(max_sharpe_weights.T, np.dot(
-        cov_matrix_2024, max_sharpe_weights))
-        )
+        print('\n' + '-- Максимальный Коэффициент Шарпа (выбранный портфель, 2024 г.)')
+        print(f'Кондиционный коэффициент Шарпа: {csr_2024:.4}')
+        print(f'Модифицированный коэффициент Шарпа: {msr_2024:.4}')
+        print(f'Бета портфеля: {beta_2024:.4}')
 
-    csr_2024 = Decimal(calculate_csr(
-        daily_returns_2024, portf_mean_2024, daily_rf_2024, ALPHA)
-        )
-
-    msr_2024 = Decimal(calculate_msr(
-        z, daily_returns_2024, portf_mean_2024, daily_rf_2024, portf_std_2024
-         ))
-
-    beta_2024 = Decimal(calculate_beta(daily_returns_2024, nasdaq_data_2024))
-
-    print('\n' + '-- Максимальный Коэффициент Шарпа (выбранный портфель, 2024 г.)')
-    print(f'Кондиционный коэффициент Шарпа: {csr_2024:.4}')
-    print(f'Модифицированный коэффициент Шарпа: {msr_2024:.4}')
-    print(f'Бета портфеля: {beta_2024:.4}')
+    except FileNotFoundError:
+        print("Файла 'all_weights.txt' в этой папке нет")
