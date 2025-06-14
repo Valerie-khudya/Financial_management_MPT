@@ -24,9 +24,9 @@ def get_returns_and_cov_matrix(data):
     return expected_annual_return, cov_matrix, daily_returns
 
 
-def generate_portfolios(num_portfolios, expected_return, cov_matrix,
-                        rf, bounds
-                        ):
+def generate_portfolios(
+        num_portfolios, expected_return, cov_matrix, rf, bounds
+        ):
     """Генерация n-го количества портфелей"""
     # Инициализация записи весов активов и массива,
     # в который будут записываться данные по сформированным портфелям.
@@ -52,7 +52,6 @@ def generate_portfolios(num_portfolios, expected_return, cov_matrix,
         results[0, i] = vol
         results[1, i] = ret
         results[2, i] = sharpe
-
     return results, weights_record
 
 
@@ -225,7 +224,7 @@ if __name__ == '__main__':
     max_ret, max_ret_vol, max_ret_sharpe = ef_max_ret.portfolio_performance()
 
     # MIN_VOL: Портфель с минимальной волатильностью
-    # с заданно минимально требуемой доходностью
+    # с заданной минимально требуемой доходностью
     min_vol, min_vol_weights, min_vol_ret = find_min_volatility_portfolio(
         tickers, expected_annual_return_2023, cov_matrix_2023,
         MIN_VOLATILITY_PORTFOLIO_RETURN, bounds
